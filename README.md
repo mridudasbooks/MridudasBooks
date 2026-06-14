@@ -1,16 +1,27 @@
-## Hi there 👋
+# MRIDUDAS BOOKS
 
-<!--
-**mridudasbooks/MridudasBooks** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+## Website Update in Progress
 
-Here are some ideas to get you started:
+---
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+**हिन्दी**  
+वेबसाइट को अभी अद्यतन और बेहतर बनाया जा रहा है। कृपया कुछ समय प्रतीक्षा करें।
+
+---
+
+**ગુજરાતી**  
+વેબસાઇટ હાલમાં અપડેટ અને સુધારણા હેઠળ છે. મહેરબાની કરીને થોડીવાર રાહ જુઓ.
+
+---
+
+**English**  
+The website is currently being updated and improved. Please wait for a short while.
+
+---
+
+**संस्कृतम्**  
+अयम् जालपृष्ठम् सम्प्रति नवीनीक्रियते संवर्ध्यते च। कृपया अल्पकालं प्रतीक्षताम्।
+
+---
+
+— मृदुदास
