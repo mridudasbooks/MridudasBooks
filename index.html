@@ -423,6 +423,19 @@ function invalidateCache(table = null) {
     for (const key in cacheMeta) cacheMeta[key] = 0;
   }
 }
+async function uploadFile(bucket, file) {
+  const fileName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(fileName, file, { cacheControl: '3600', upsert: true });
+  if (error) throw error;
+  return fileName;
+}
+
+function getPublicFileUrl(bucket, fileName) {
+  const { data } = supabase.storage.from(bucket).getPublicFileUrl(fileName);
+  return data?.publicUrl || '';
+}
 function generateId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
@@ -2357,19 +2370,41 @@ showSocialMediaEditor() {
   const links = getSocialLinks();
   let html = `<div class="modal-overlay" onclick="if(event.target===this)App.closeModal()"><div class="modal-sheet"><h3 style="font-family:'Merriweather',serif;margin-bottom:12px;">✏️ Edit Social Links</h3><div id="social-editor-list">`;
   links.forEach((link, i) => {
-    html += `<div class="card" style="padding:12px;margin-bottom:8px;"><input class="input" id="socialName${i}" placeholder="Name" value="${App.escAttr(link.name||'')}" style="margin-bottom:4px;"><input class="input" id="socialImage${i}" placeholder="Image URL / Path" value="${App.escAttr(link.image||'')}" style="margin-bottom:4px;"><input class="input" id="socialUrl${i}" placeholder="URL" value="${App.escAttr(link.url||'')}" style="margin-bottom:4px;"><div style="display:flex;gap:8px;align-items:center;"><label><input type="checkbox" id="socialVisible${i}" ${link.visible?'checked':''}> Visible</label><button class="btn btn-xs btn-danger" style="margin-left:auto;" onclick="App._deleteSocialLink(${i})">🗑️</button></div></div>`;
-  });
+html += `<div class="card" style="padding:12px;margin-bottom:8px;"><input class="input" id="socialName${i}" placeholder="Name" value="${App.escAttr(link.name||'')}" style="margin-bottom:4px;"><input class="input" id="socialImage${i}" placeholder="Image URL / Path" value="${App.escAttr(link.image||'')}" style="margin-bottom:4px;"><input class="input" id="socialUrl${i}" placeholder="URL" value="${App.escAttr(link.url||'')}" style="margin-bottom:4px;"><div style="display:flex;gap:8px;align-items:center;"><label><input type="checkbox" id="socialVisible${i}" ${link.visible?'checked':''}> Visible</label><button class="btn btn-xs btn-danger" style="margin-left:auto;" onclick="App._deleteSocialLink(${i})">🗑️</button></div></div>`;
+});
   html += `</div><button class="btn btn-outline btn-sm" onclick="App._addSocialLink()">+ Add Link</button><button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="App._saveSocialLinks()">💾 Save</button></div></div>`;
   document.getElementById('modalContainer').innerHTML = html;
+if (!App._tempSocialLinks) {
   App._tempSocialLinks = JSON.parse(JSON.stringify(links));
+}
 },
-
 _addSocialLink() {
-  if (!App._tempSocialLinks) App._tempSocialLinks = getSocialLinks();
+  if (!App._tempSocialLinks) {
+    const links = getSocialLinks();
+    App._tempSocialLinks = JSON.parse(JSON.stringify(links));
+  }
   App._tempSocialLinks.push({ id: generateId(), name: '', image: '', url: '', visible: true });
   this.showSocialMediaEditor();
 },
 
+async _uploadSocialIcon(index, fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  try {
+    const fileName = await uploadFile('social_icons', file);
+    const publicUrl = getPublicFileUrl('social_icons', fileName);
+    if (publicUrl) {
+      document.getElementById('socialImage' + index).value = publicUrl;
+      const preview = document.getElementById('socialImagePreview' + index);
+      if (preview) { preview.src = publicUrl; preview.style.display = 'block'; }
+      if (App._tempSocialLinks && App._tempSocialLinks[index]) {
+        App._tempSocialLinks[index].image = publicUrl;
+      }
+    }
+  } catch (e) {
+    App.toast('Upload failed');
+  }
+},
 _deleteSocialLink(index) {
   if (!App._tempSocialLinks) return;
   App._tempSocialLinks.splice(index, 1);
@@ -2444,8 +2479,27 @@ if (mbbooksId) {
       if (typeof NaamJaap !== 'undefined') NaamJaap.init();
       // Service worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).catch(() => {});
+  navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).then((registration) => {
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      if (newWorker) {
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            this.showUpdateModal();
+          }
+        });
       }
+    });
+  }).catch(() => {});
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now();
+    }
+  });
+}
       this.checkAppVersion();
     },
     async checkSession() {
